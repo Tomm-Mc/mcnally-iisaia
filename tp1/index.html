@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Contraseña - Ruleta Casino</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rye&display=swap');
+
+        body {
+            background-color: #FFCC00;
+            font-family: 'LHF Chicago Script', 'Rye', 'Sancreek', 'Playbill', cursive, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            color: #111;
+            box-sizing: border-box;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            border: 4px solid #000;
+            background-color: #fff;
+            padding: 15px 30px;
+            box-shadow: 6px 6px 0 #000;
+            max-width: 600px;
+        }
+
+        h1 {
+            margin: 0 0 10px 0;
+            font-size: 32px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #D40000;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        p.requisitos {
+            font-family: monospace;
+            font-size: 16px;
+            font-weight: bold;
+            margin: 0;
+            line-height: 1.4;
+        }
+
+        main {
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #000;
+            box-shadow: 8px 8px 0 rgba(0,0,0,0.5);
+            display: inline-block;
+        }
+
+        .slot-machine {
+            background-color: #fff;
+            border: 4px solid #D40000;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .slot-window {
+            width: 60px;
+            height: 200px; /* 5 filas de 40px */
+            overflow: hidden;
+            position: relative;
+            background: #fff;
+            border: 4px solid #000;
+            box-sizing: border-box;
+        }
+
+        .slot-strip {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            will-change: transform;
+        }
+
+        .char {
+            height: 40px;
+            line-height: 40px;
+            text-align: center;
+            font-size: 28px;
+            font-weight: bold;
+            font-family: monospace;
+            color: #000;
+        }
+
+        .slot-overlay {
+            position: absolute;
+            top: 76px; /* 80px - 4px de borde para que encuadre perfecto al centro */
+            left: -4px; /* Ajuste por el borde interno */
+            width: calc(100% + 8px);
+            height: 40px;
+            border: 4px solid #FF0000;
+            box-sizing: border-box;
+            pointer-events: none;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.8), inset 0 0 5px rgba(255,0,0,0.5);
+            z-index: 10;
+        }
+
+        footer {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .password-display {
+            display: flex;
+            gap: 10px;
+        }
+
+        .box {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #000;
+            background-color: gold;
+            color: #008000;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 28px;
+            line-height: 32px; /* Alineación vertical */
+            text-align: center;
+            box-shadow: 4px 4px 0 #000;
+            box-sizing: border-box;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-family: 'Rye', cursive, sans-serif;
+            font-size: 18px;
+            font-weight: bold;
+            text-transform: uppercase;
+            background-color: #fff;
+            color: #000;
+            border: 4px solid #000;
+            border-radius: 0 !important;
+            cursor: pointer;
+            box-shadow: 4px 4px 0 #000;
+            transition: all 0.1s;
+        }
+
+        button:active:not(:disabled) {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0 #000;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            color: #666;
+            cursor: not-allowed;
+            box-shadow: 4px 4px 0 #666;
+            border-color: #666;
+        }
+
+        #btn-spin { background-color: #00AA00; color: #FFF; }
+        #btn-stop { background-color: #D40000; color: #FFF; }
+        #btn-spin:disabled { background-color: #557755; color: #AAA; }
+        
+        #validation-msg {
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 18px;
+            background: #fff;
+            border: 4px solid #000;
+            padding: 10px 20px;
+            display: none;
+            box-shadow: 4px 4px 0 #000;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Crear Contraseña</h1>
+        <p class="requisitos">
+            Debe tener exactamente 6 caracteres, incluyendo al menos 1 letra, 
+            1 número y 1 símbolo (! @ # $ %).
+        </p>
+    </header>
+
+    <main>
+        <div class="slot-machine">
+            <div class="slot-window">
+                <div class="slot-strip" id="strip"></div>
+                <div class="slot-overlay"></div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="password-display" id="pwd-display">
+            <!-- 6 casilleros generados por JS -->
+        </div>
+
+        <div class="controls">
+            <button id="btn-spin">Girar</button>
+            <button id="btn-stop">Frenar</button>
+            <button id="btn-del">Borrar último</button>
+            <button id="btn-restart" style="display: none;">Reiniciar</button>
+        </div>
+
+        <div id="validation-msg"></div>
+    </footer>
+
+    <script>
+        // Set de 41 caracteres fijos.
+        const CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%".split("");
+        const ITEM_HEIGHT = 40; // Altura de cada carácter en px
+        const SET_HEIGHT = CHARSET.length * ITEM_HEIGHT; // 41 * 40 = 1640px
+
+        let currentStrip = [];
+        let entered = [];
+        
+        let girando = false;
+        let stopping = false;
+        let offset = 0; // Posición lógica de la tira
+        
+        let animationFrameId = null;
+        let lastTime = null;
+
+        function shuffleArray(array) {
+            let arr = array.slice();
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function initRuleta() {
+            currentStrip = shuffleArray(CHARSET);
+            const stripEl = document.getElementById("strip");
+            stripEl.innerHTML = "";
+            
+            // Agregamos 2 sets completos (82 elementos en total) para un loop visual infinito sin saltos
+            for(let loop = 0; loop < 2; loop++) {
+                currentStrip.forEach(char => {
+                    let div = document.createElement("div");
+                    div.className = "char";
+                    div.textContent = char;
+                    stripEl.appendChild(div);
+                });
+            }
+        }
+
+        function renderBoxes() {
+            const display = document.getElementById("pwd-display");
+            display.innerHTML = "";
+            for (let i = 0; i < 6; i++) {
+                let box = document.createElement("div");
+                box.className = "box";
+                box.textContent = entered[i] !== undefined ? entered[i] : "";
+                display.appendChild(box);
+            }
+        }
+
+        function updateDOM() {
+            // Usamos módulo para la renderización, manteniendo el offset en el primer set virtual [0, 1640)
+            let renderOffset = offset % SET_HEIGHT;
+            if (renderOffset < 0) renderOffset += SET_HEIGHT; // Seguridad matemática
+            document.getElementById("strip").style.transform = `translateY(-${renderOffset}px)`;
+        }
+
+        function spinLoop(time) {
+            if (!girando) return;
+            
+            if (lastTime === null) lastTime = time;
+            let dt = time - lastTime;
+            lastTime = time;
+            
+            // Limitamos dt en caso de inactividad de pestaña
+            if (dt > 100) dt = 100;
+            
+            // Velocidad: 40px cada 90ms ≈ 0.4444 px/ms
+            offset += (40 / 90) * dt;
+            updateDOM();
+            
+            animationFrameId = requestAnimationFrame(spinLoop);
+        }
+
+        function girar() {
+            if (girando || stopping || entered.length >= 6) return;
+            girando = true;
+            document.getElementById("btn-spin").disabled = true;
+            document.getElementById("btn-stop").disabled = false;
+            lastTime = null;
+            animationFrameId = requestAnimationFrame(spinLoop);
+        }
+
+        function frenar() {
+            if (!girando || stopping) return;
+            stopping = true; // Previene reiniciar giro o doble frenado
+            document.getElementById("btn-stop").disabled = true; // Deshabilita click doble
+            cancelAnimationFrame(animationFrameId);
+
+            // Calculamos el índice que está más cerca del centro
+            // El centro de la ventana se encuentra a (offset + 80px)
+            let currentCenterY = offset + (ITEM_HEIGHT * 2);
+            let closestIndex = Math.round(currentCenterY / ITEM_HEIGHT);
+            
+            // Destino real: 4 posiciones más adelante para simular inercia
+            let targetIndex = closestIndex + 4;
+            
+            // Posición exacta a la que debe snapear
+            let targetOffset = (targetIndex * ITEM_HEIGHT) - (ITEM_HEIGHT * 2);
+
+            // Animación de frenado gradual con 1500ms de duración
+            let snapStartTime = null;
+            let startOffset = offset;
+            const snapDuration = 1500; 
+
+            function snapLoop(time) {
+                if (snapStartTime === null) snapStartTime = time;
+                let elapsed = time - snapStartTime;
+                let t = Math.min(elapsed / snapDuration, 1);
+
+                // Easing EaseOut Cúbico (rápido al principio, cada vez más lento)
+                let ease = 1 - Math.pow(1 - t, 3);
+                offset = startOffset + (targetOffset - startOffset) * ease;
+                updateDOM();
+
+                if (t >= 1) {
+                    stopping = false;
+                    girando = false; // Recién al terminar la animación deja de considerarse girando
+                    addCharacter(targetIndex);
+                    
+                    // Rehabilitar "Frenar" si corresponde (si no llegamos a 6 caracteres)
+                    if (entered.length < 6) {
+                        document.getElementById("btn-stop").disabled = false;
+                    }
+                } else {
+                    requestAnimationFrame(snapLoop);
+                }
+            }
+            requestAnimationFrame(snapLoop);
+        }
+
+        function addCharacter(globalIndex) {
+            // Resolviendo el índice relativo al array original
+            let charIndex = globalIndex % CHARSET.length;
+            if (charIndex < 0) charIndex += CHARSET.length;
+            
+            let selectedChar = currentStrip[charIndex];
+            entered.push(selectedChar);
+            renderBoxes();
+
+            document.getElementById("btn-spin").disabled = false;
+
+            if (entered.length === 6) {
+                validatePassword();
+            }
+        }
+
+        function borrar() {
+            if (entered.length > 0) {
+                entered.pop();
+                renderBoxes();
+                
+                // Ocultar mensajes de validación si se borra
+                document.getElementById("validation-msg").style.display = "none";
+                document.getElementById("btn-restart").style.display = "none";
+                
+                // Rehabilitar botón de girar si no está girando
+                document.getElementById("btn-spin").disabled = girando || stopping;
+            }
+        }
+
+        function validatePassword() {
+            let pwd = entered.join("");
+            let hasLetter = /[A-Z]/.test(pwd);
+            let hasNumber = /[0-9]/.test(pwd);
+            let hasSymbol = /[!@#$%]/.test(pwd);
+
+            let msgEl = document.getElementById("validation-msg");
+            msgEl.style.display = "block";
+
+            if (hasLetter && hasNumber && hasSymbol) {
+                msgEl.innerHTML = "<span style='color: #00AA00;'>¡Contraseña válida! Cumple todos los requisitos.</span>";
+            } else {
+                let errors = [];
+                if (!hasLetter) errors.push("1 letra");
+                if (!hasNumber) errors.push("1 número");
+                if (!hasSymbol) errors.push("1 símbolo");
+                msgEl.innerHTML = "<span style='color: #D40000;'>Error: Faltan las siguientes reglas:<br>- " + errors.join("<br>- ") + "</span>";
+            }
+
+            document.getElementById("btn-spin").disabled = true; // Bloquear giro hasta reiniciar
+            document.getElementById("btn-restart").style.display = "inline-block";
+        }
+
+        function reiniciar() {
+            entered = [];
+            renderBoxes();
+            
+            document.getElementById("validation-msg").style.display = "none";
+            document.getElementById("btn-restart").style.display = "none";
+            document.getElementById("btn-spin").disabled = false;
+            
+            initRuleta(); // Vuelve a mezclar la ruleta
+            
+            offset = 0;
+            updateDOM();
+        }
+
+        // Event Listeners
+        document.getElementById("btn-spin").addEventListener("click", girar);
+        document.getElementById("btn-stop").addEventListener("click", frenar);
+        document.getElementById("btn-del").addEventListener("click", borrar);
+        document.getElementById("btn-restart").addEventListener("click", reiniciar);
+
+        // Setup inicial
+        initRuleta();
+        renderBoxes();
+        updateDOM();
+    </script>
+</body>
+</html>
