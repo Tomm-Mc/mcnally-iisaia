@@ -1,0 +1,119 @@
+// Nota: los campos que en la app se tratan como "enum" (level, status, role,
+// category, type, quality) se modelan como String porque el conector SQLite
+// de Prisma no soporta `enum` nativo. Se validan como uniones literales en
+// TypeScript + Zod (ver src/schemas/enums.ts). Migrar a Postgres sólo requiere
+// cambiar `provider` y `DATABASE_URL`; ahí sí se podrían convertir a enum real.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  name           String
+  passwordHash   String
+  level          String // A2 | B1 | B2
+  xp             Int       @default(0)
+  streakDays     Int       @default(0)
+  lastActiveDate DateTime?
+  createdAt      DateTime  @default(now())
+
+  sessions    Session[]
+  exercises   Exercise[]
+  dailyUsages DailyUsage[]
+}
+
+model Scenario {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  title         String
+  description   String
+  emoji         String
+  level         String // A2 | B1 | B2
+  characterName String
+  characterRole String
+  systemPrompt  String
+  openingLine   String
+  createdAt     DateTime @default(now())
+
+  sessions Session[]
+}
+
+model Session {
+  id         String    @id @default(cuid())
+  userId     String
+  scenarioId String
+  status     String    @default("active") // active | finished
+  score      Int?
+  summary    String? // JSON stringificado: { score, strengths, improvements, tip }
+  xpEarned   Int       @default(0)
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scenario Scenario  @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@index([userId])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  sessionId String
+  role      String // user | assistant
+  content   String
+  createdAt DateTime @default(now())
+
+  session     Session      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  corrections Correction[]
+
+  @@index([sessionId])
+}
+
+model Correction {
+  id          String   @id @default(cuid())
+  messageId   String
+  original    String
+  corrected   String
+  category    String
+  explanation String
+  createdAt   DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+}
+
+model Exercise {
+  id             String   @id @default(cuid())
+  userId         String
+  category       String
+  type           String // fill_blank | fix_sentence | translate
+  prompt         String
+  expectedAnswer String
+  userAnswer     String?
+  isCorrect      Boolean?
+  feedback       String?
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model DailyUsage {
+  id           String   @id @default(cuid())
+  userId       String
+  date         String // YYYY-MM-DD
+  messageCount Int      @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+}
