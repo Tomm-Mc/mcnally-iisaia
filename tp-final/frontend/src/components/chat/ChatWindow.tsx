@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Message, Scenario } from '../../api/types';
+import type { InputMode, Message, Scenario } from '../../api/types';
 import { streamMessage } from '../../api/sessions';
 import { MessageBubble } from './MessageBubble';
 import { ChatInput } from './ChatInput';
+import { VoicePanel } from './VoicePanel';
+import { useVoiceMode } from '../../hooks/useVoiceMode';
 import { useAuth } from '../../context/AuthContext';
 
 interface ChatWindowProps {
@@ -23,6 +25,7 @@ export function ChatWindow({ sessionId, scenario, initialMessages, disabled }: C
   const [xpToast, setXpToast] = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const { refreshUser } = useAuth();
+  const voice = useVoiceMode({ sessionId, onTranscript: (text) => handleSend(text, 'voice') });
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -34,7 +37,7 @@ export function ChatWindow({ sessionId, scenario, initialMessages, disabled }: C
     return () => clearTimeout(t);
   }, [xpToast]);
 
-  async function handleSend(content: string) {
+  async function handleSend(content: string, inputMode: InputMode = 'text') {
     setError(null);
     tempIdCounter += 1;
     const tempId = `temp-${tempIdCounter}`;
@@ -71,6 +74,7 @@ export function ChatWindow({ sessionId, scenario, initialMessages, disabled }: C
       },
       onToken: (token) => {
         setStreamingText((prev) => prev + token);
+        voice.onAssistantToken(token);
       },
       onDone: (payload) => {
         setIsStreaming(false);
@@ -84,18 +88,26 @@ export function ChatWindow({ sessionId, scenario, initialMessages, disabled }: C
           setXpToast(payload.xpEarned);
           refreshUser();
         }
+        void voice.onAssistantDone();
       },
       onError: (message) => {
         setIsCheckingCorrection(false);
         setIsStreaming(false);
         setStreamingText('');
         setError(message);
+        voice.onAssistantError();
       },
-    });
+    }, inputMode);
+  }
+
+  function handleStartVoice() {
+    // Al entrar al modo voz, el personaje lee su último mensaje y después escucha.
+    const last = messages[messages.length - 1];
+    void voice.enable(last?.role === 'assistant' ? last.content : undefined);
   }
 
   return (
-    <div className="relative flex h-[calc(100vh-8rem)] flex-col overflow-hidden rounded-2xl bg-brand-bg shadow-sm md:h-[calc(100vh-6rem)]">
+    <div className="relative flex h-[calc(100vh-8rem)] flex-col overflow-hidden rounded-xl border border-slate-200 bg-brand-bg md:h-[calc(100vh-6rem)]">
       {xpToast !== null && (
         <div className="pointer-events-none absolute right-4 top-4 z-10 animate-bounce rounded-full bg-brand-secondary px-3 py-1 text-sm font-bold text-white shadow-md">
           +{xpToast} XP
@@ -115,6 +127,7 @@ export function ChatWindow({ sessionId, scenario, initialMessages, disabled }: C
             message={message}
             characterName={scenario.characterName}
             isCheckingCorrection={isCheckingCorrection && message.role === 'user' && message === messages[messages.length - 1]}
+            onSpeak={message.role === 'assistant' ? () => void voice.replay(message.content) : undefined}
           />
         ))}
 
@@ -135,7 +148,35 @@ export function ChatWindow({ sessionId, scenario, initialMessages, disabled }: C
         <div ref={bottomRef} />
       </div>
 
-      <ChatInput onSend={handleSend} disabled={disabled || isCheckingCorrection || isStreaming} />
+      {voice.enabled && !disabled && (
+        <VoicePanel
+          status={voice.status}
+          level={voice.level}
+          notice={voice.notice}
+          characterName={scenario.characterName}
+          onStartListening={() => void voice.startListening()}
+          onStopListening={voice.stopListening}
+          onInterrupt={voice.interrupt}
+          onClose={voice.disable}
+        />
+      )}
+
+      {!voice.enabled && voice.notice && (
+        <p className="bg-white px-4 pt-2 text-center text-xs font-semibold text-brand-error">{voice.notice}</p>
+      )}
+
+      <ChatInput
+        onSend={(content) => handleSend(content)}
+        disabled={
+          disabled ||
+          isCheckingCorrection ||
+          isStreaming ||
+          voice.status === 'listening' ||
+          voice.status === 'transcribing'
+        }
+        // Se muestra aunque el navegador no pueda grabar: al tocarlo, el hook explica por qué.
+        onStartVoice={!voice.enabled && !disabled ? handleStartVoice : undefined}
+      />
     </div>
   );
 }

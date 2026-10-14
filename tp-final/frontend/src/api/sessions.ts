@@ -1,5 +1,5 @@
 import { apiFetch, getToken, triggerUnauthorized } from './client';
-import type { CorrectionError, Message, Quality, Session, SessionSummary } from './types';
+import type { CorrectionError, InputMode, Message, Quality, Session, SessionSummary } from './types';
 
 export function createSession(scenarioId: string): Promise<{ session: Session }> {
   return apiFetch<{ session: Session }>('/sessions', {
@@ -50,7 +50,12 @@ interface StreamCallbacks {
  * Envía un mensaje y consume la respuesta SSE del backend "a mano" (no se
  * puede usar EventSource porque necesita POST + header Authorization).
  */
-export async function streamMessage(sessionId: string, content: string, callbacks: StreamCallbacks): Promise<void> {
+export async function streamMessage(
+  sessionId: string,
+  content: string,
+  callbacks: StreamCallbacks,
+  inputMode: InputMode = 'text'
+): Promise<void> {
   const token = getToken();
 
   let response: Response;
@@ -61,7 +66,7 @@ export async function streamMessage(sessionId: string, content: string, callback
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, inputMode }),
     });
   } catch {
     callbacks.onError('No se pudo conectar con el servidor. Revisá tu conexión.');

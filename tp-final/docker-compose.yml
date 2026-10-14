@@ -21,6 +21,7 @@ services:
       context: ./frontend
     ports:
       - '5173:80'
+      - '5443:443' # HTTPS autofirmado, para usar el modo voz desde otro dispositivo
     depends_on:
       backend:
         condition: service_healthy

@@ -1,13 +1,15 @@
 import { useState, type KeyboardEvent } from 'react';
-import { Send } from 'lucide-react';
+import { Mic, Send } from 'lucide-react';
 import { Button } from '../ui/Button';
 
 interface ChatInputProps {
   onSend: (content: string) => void;
   disabled?: boolean;
+  /** Si se pasa, muestra el botón para entrar al modo voz. */
+  onStartVoice?: () => void;
 }
 
-export function ChatInput({ onSend, disabled }: ChatInputProps) {
+export function ChatInput({ onSend, disabled, onStartVoice }: ChatInputProps) {
   const [value, setValue] = useState('');
 
   function submit() {
@@ -26,6 +28,17 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
 
   return (
     <div className="flex items-end gap-2 border-t border-slate-200 bg-white p-3">
+      {onStartVoice && (
+        <Button
+          variant="ghost"
+          onClick={onStartVoice}
+          disabled={disabled}
+          aria-label="Activar modo voz"
+          title="Modo voz: charlá hablando"
+        >
+          <Mic className="h-4 w-4" aria-hidden="true" />
+        </Button>
+      )}
       <textarea
         value={value}
         onChange={(e) => setValue(e.target.value)}

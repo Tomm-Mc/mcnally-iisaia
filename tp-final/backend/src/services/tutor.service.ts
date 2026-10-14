@@ -19,6 +19,7 @@ interface TutorParams {
   scenario: ScenarioForTutor;
   userLevel: Level;
   history: HistoryMessage[]; // últimos mensajes, sin incluir el opening line
+  spoken?: boolean; // modo voz: la respuesta se va a sintetizar con TTS
 }
 
 const MOCK_FOLLOWUPS = [
@@ -50,7 +51,7 @@ export async function* generateTutorReply(params: TutorParams): AsyncGenerator<s
     return;
   }
 
-  const systemPrompt = buildTutorSystemPrompt(params.scenario, params.userLevel);
+  const systemPrompt = buildTutorSystemPrompt(params.scenario, params.userLevel, params.spoken);
   const messages: ChatMessage[] = [
     { role: 'system', content: systemPrompt },
     { role: 'assistant', content: params.scenario.openingLine },

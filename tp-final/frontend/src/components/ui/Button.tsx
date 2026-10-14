@@ -25,7 +25,7 @@ const SIZE_CLASSES: Record<Size, string> = {
 export function Button({ variant = 'primary', size = 'md', className = '', children, ...rest }: ButtonProps) {
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 rounded-2xl font-semibold shadow-sm transition-colors
+      className={`inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-colors
         disabled:cursor-not-allowed disabled:opacity-50
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
         ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${className}`}

@@ -1,9 +1,10 @@
-import type { Level } from '../schemas/enums';
+import type { Level, Role } from '../schemas/enums';
 
 export interface AuthUser {
   id: string;
   email: string;
   level: Level;
+  role: Role;
 }
 
 declare global {

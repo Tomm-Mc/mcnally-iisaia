@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Volume2 } from 'lucide-react';
 import type { Message } from '../../api/types';
 import { CorrectionCard } from './CorrectionCard';
 
@@ -7,6 +7,8 @@ interface MessageBubbleProps {
   message: Message;
   characterName: string;
   isCheckingCorrection?: boolean;
+  /** Si se pasa, los mensajes del personaje muestran un botón para escucharlos. */
+  onSpeak?: () => void;
 }
 
 function initials(name: string): string {
@@ -18,7 +20,7 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
-export function MessageBubble({ message, characterName, isCheckingCorrection }: MessageBubbleProps) {
+export function MessageBubble({ message, characterName, isCheckingCorrection, onSpeak }: MessageBubbleProps) {
   const [expanded, setExpanded] = useState(false);
   const isUser = message.role === 'user';
   const corrections = message.corrections ?? [];
@@ -32,7 +34,19 @@ export function MessageBubble({ message, characterName, isCheckingCorrection }: 
         </div>
         <div>
           <p className="mb-0.5 text-xs font-semibold text-slate-400">{characterName}</p>
-          <div className="max-w-md rounded-2xl rounded-tl-sm bg-white px-4 py-2.5 text-sm shadow-sm">{message.content}</div>
+          <div className="flex items-end gap-1">
+            <div className="max-w-md rounded-2xl rounded-tl-sm border border-slate-200 bg-white px-4 py-2.5 text-sm">{message.content}</div>
+            {onSpeak && (
+              <button
+                onClick={onSpeak}
+                className="shrink-0 rounded-full p-1.5 text-slate-400 transition-colors hover:bg-violet-100 hover:text-brand-primary"
+                aria-label={`Escuchar a ${characterName}`}
+                title="Escuchar"
+              >
+                <Volume2 className="h-4 w-4" aria-hidden="true" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -40,7 +54,7 @@ export function MessageBubble({ message, characterName, isCheckingCorrection }: 
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <div className="max-w-md rounded-2xl rounded-tr-sm bg-brand-primary px-4 py-2.5 text-sm text-white shadow-sm">
+      <div className="max-w-md rounded-2xl rounded-tr-sm bg-brand-primary px-4 py-2.5 text-sm text-white">
         {message.content}
       </div>
 

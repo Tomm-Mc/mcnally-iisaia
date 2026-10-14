@@ -4,6 +4,13 @@ export const LEVELS = ['A2', 'B1', 'B2'] as const;
 export type Level = (typeof LEVELS)[number];
 export const levelSchema = z.enum(LEVELS);
 
+export const ROLES = ['student', 'admin'] as const;
+export type Role = (typeof ROLES)[number];
+export const roleSchema = z.enum(ROLES);
+
+export const LOGIN_OUTCOMES = ['success', 'invalid_credentials', 'blocked'] as const;
+export type LoginOutcome = (typeof LOGIN_OUTCOMES)[number];
+
 export const SESSION_STATUSES = ['active', 'finished'] as const;
 export type SessionStatus = (typeof SESSION_STATUSES)[number];
 export const sessionStatusSchema = z.enum(SESSION_STATUSES);

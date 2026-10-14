@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+import OpenAI, { toFile } from 'openai';
 import { env, isMockMode } from '../config/env';
 
 export { isMockMode };
@@ -13,10 +13,14 @@ function getClient(): OpenAI {
 }
 
 export function logAiMode(): void {
-  if (isMockMode) {
+  if (isMockMode && !env.AI_MOCK_MODE) {
+    console.warn('⚠️ AI_MOCK_MODE=false pero OPENAI_API_KEY está vacía: la IA queda en modo MOCK igual.');
+  } else if (isMockMode) {
     console.log('🤖 IA en modo MOCK (AI_MOCK_MODE=true o falta OPENAI_API_KEY). No se harán llamadas a OpenAI.');
   } else {
-    console.log(`🤖 IA en modo REAL, usando el modelo "${env.OPENAI_MODEL}".`);
+    console.log(
+      `🤖 IA en modo REAL, usando "${env.OPENAI_MODEL}" (chat), "${env.OPENAI_STT_MODEL}" (STT) y "${env.OPENAI_TTS_MODEL}" (TTS).`
+    );
   }
 }
 
@@ -76,4 +80,43 @@ export async function* streamChatCompletion(messages: ChatMessage[]): AsyncGener
       yield delta;
     }
   }
+}
+
+/**
+ * Speech-to-text: transcribe un audio grabado en el navegador. El SDK infiere
+ * el formato por la extensión del nombre de archivo, por eso se pasa explícito.
+ * Sólo debe llamarse cuando isMockMode es false.
+ */
+export async function transcribeAudio(audio: Buffer, filename: string, prompt: string): Promise<string> {
+  const openai = getClient();
+  const response = await openai.audio.transcriptions.create({
+    model: env.OPENAI_STT_MODEL,
+    file: await toFile(audio, filename),
+    language: 'en',
+    prompt,
+  });
+  return response.text;
+}
+
+export interface SpeechOptions {
+  voice: string;
+  instructions: string;
+}
+
+/**
+ * Text-to-speech: devuelve el audio en MP3. `instructions` (tono, ritmo) sólo
+ * lo aceptan los modelos gpt-4o-*-tts; tts-1 / tts-1-hd lo rechazan.
+ * Sólo debe llamarse cuando isMockMode es false.
+ */
+export async function synthesizeSpeech(text: string, options: SpeechOptions): Promise<Buffer> {
+  const openai = getClient();
+  const supportsInstructions = env.OPENAI_TTS_MODEL.startsWith('gpt-');
+  const response = await openai.audio.speech.create({
+    model: env.OPENAI_TTS_MODEL,
+    voice: options.voice,
+    input: text,
+    response_format: 'mp3',
+    ...(supportsInstructions ? { instructions: options.instructions } : {}),
+  });
+  return Buffer.from(await response.arrayBuffer());
 }

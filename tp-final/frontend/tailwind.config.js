@@ -10,7 +10,7 @@ export default {
           accent: '#F59E0B',
           error: '#F87171',
           errorBg: '#FEF2F2',
-          bg: '#F8FAFC',
+          bg: '#F1F5F9', // slate-100, compartido con el panel de admin
           text: '#0F172A',
         },
       },

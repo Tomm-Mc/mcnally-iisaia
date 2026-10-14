@@ -7,6 +7,8 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(8, 'JWT_SECRET debe tener al menos 8 caracteres'),
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_MODEL: z.string().default('gpt-4o-mini'),
+  OPENAI_STT_MODEL: z.string().default('gpt-4o-mini-transcribe'),
+  OPENAI_TTS_MODEL: z.string().default('gpt-4o-mini-tts'),
   AI_MOCK_MODE: z
     .string()
     .optional()

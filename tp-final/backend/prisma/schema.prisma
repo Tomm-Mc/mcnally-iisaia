@@ -1,7 +1,7 @@
 // Nota: los campos que en la app se tratan como "enum" (level, status, role,
-// category, type, quality) se modelan como String porque el conector SQLite
-// de Prisma no soporta `enum` nativo. Se validan como uniones literales en
-// TypeScript + Zod (ver src/schemas/enums.ts). Migrar a Postgres sólo requiere
+// category, type, quality, inputMode, outcome) se modelan como String porque el
+// conector SQLite de Prisma no soporta `enum` nativo. Se validan como uniones
+// literales en TypeScript + Zod (ver src/schemas/enums.ts). Migrar a Postgres sólo requiere
 // cambiar `provider` y `DATABASE_URL`; ahí sí se podrían convertir a enum real.
 
 generator client {
@@ -18,7 +18,8 @@ model User {
   email          String    @unique
   name           String
   passwordHash   String
-  level          String // A2 | B1 | B2
+  level          String // A2 | B1 | B2 (para admin no se usa)
+  role           String    @default("student") // student | admin
   xp             Int       @default(0)
   streakDays     Int       @default(0)
   lastActiveDate DateTime?
@@ -27,6 +28,7 @@ model User {
   sessions    Session[]
   exercises   Exercise[]
   dailyUsages DailyUsage[]
+  loginEvents LoginEvent[]
 }
 
 model Scenario {
@@ -68,6 +70,7 @@ model Message {
   sessionId String
   role      String // user | assistant
   content   String
+  inputMode String   @default("text") // text | voice (sólo relevante en mensajes del usuario)
   createdAt DateTime @default(now())
 
   session     Session      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
@@ -116,4 +119,21 @@ model DailyUsage {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])
+}
+
+// Registro de accesos para el panel de administración. Se guarda también el
+// email de los intentos fallidos (userId null si el email no existe).
+model LoginEvent {
+  id        String   @id @default(cuid())
+  email     String
+  userId    String?
+  outcome   String // success | invalid_credentials | blocked
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([userId])
 }

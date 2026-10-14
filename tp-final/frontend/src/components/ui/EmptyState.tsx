@@ -9,7 +9,7 @@ interface EmptyStateProps {
 
 export function EmptyState({ emoji, title, description, action }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl bg-white p-10 text-center shadow-sm">
+    <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white p-10 text-center">
       <span className="text-5xl" role="img" aria-hidden="true">
         {emoji}
       </span>

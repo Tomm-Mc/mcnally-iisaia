@@ -8,7 +8,8 @@ export function ErrorsByCategoryChart({ data }: { data: ProgressSummary['errorsB
 
   return (
     <ResponsiveContainer width="100%" height={260}>
-      <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
+      {/* left amplio: las etiquetas inclinadas del eje X se salen por la izquierda en la primera barra. */}
+      <BarChart data={data} margin={{ top: 8, right: 8, left: 24, bottom: 8 }}>
         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
         <XAxis
           dataKey="label"

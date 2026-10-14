@@ -103,7 +103,7 @@ export function DashboardPage() {
             {recentSessions.map((session) => (
               <Card
                 key={session.id}
-                className="flex cursor-pointer items-center justify-between hover:shadow-md"
+                className="flex cursor-pointer items-center justify-between transition-colors hover:border-slate-300 hover:bg-slate-50"
                 onClick={() =>
                   navigate(
                     session.status === 'active' ? `/chat/${session.id}` : `/sessions/${session.id}/summary`

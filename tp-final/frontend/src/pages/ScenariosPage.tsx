@@ -48,7 +48,7 @@ export function ScenariosPage() {
           {data.scenarios.map((scenario) => (
             <Card
               key={scenario.id}
-              className="flex cursor-pointer flex-col gap-2 hover:shadow-md"
+              className="flex cursor-pointer flex-col gap-2 transition-colors hover:border-slate-300 hover:bg-slate-50"
               onClick={() => !startSession.isPending && startSession.mutate(scenario.id)}
             >
               <div className="flex items-center justify-between">
@@ -66,7 +66,7 @@ export function ScenariosPage() {
 
       {startSession.isPending && (
         <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/20">
-          <div className="flex items-center gap-3 rounded-2xl bg-white px-6 py-4 shadow-lg">
+          <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-6 py-4 shadow-lg">
             <Spinner />
             <span className="font-semibold">Empezando la conversación...</span>
           </div>

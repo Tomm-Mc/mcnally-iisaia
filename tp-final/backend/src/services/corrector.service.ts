@@ -2,11 +2,13 @@ import { createStructuredCompletion, isMockMode, type ChatMessage } from '../lib
 import { buildCorrectorSystemPrompt, buildCorrectorUserPrompt } from '../prompts/corrector.prompt';
 import { correctorJsonSchema, correctorResultSchema, type CorrectionError, type CorrectorResult } from '../schemas/corrector.schema';
 import type { Level } from '../schemas/enums';
+import type { InputMode } from '../schemas/session.schema';
 
 interface AnalyzeParams {
   lastUserMessage: string;
   previousMessages: { role: 'user' | 'assistant'; content: string }[];
   userLevel: Level;
+  inputMode?: InputMode;
 }
 
 const FALLBACK_RESULT: CorrectorResult = {
@@ -22,12 +24,12 @@ const FALLBACK_RESULT: CorrectorResult = {
  */
 export async function analyzeMessage(params: AnalyzeParams): Promise<CorrectorResult> {
   if (isMockMode) {
-    return mockAnalyze(params.lastUserMessage);
+    return mockAnalyze(params.lastUserMessage, params.inputMode ?? 'text');
   }
 
   try {
     const messages: ChatMessage[] = [
-      { role: 'system', content: buildCorrectorSystemPrompt(params.userLevel) },
+      { role: 'system', content: buildCorrectorSystemPrompt(params.userLevel, params.inputMode) },
       {
         role: 'user',
         content: buildCorrectorUserPrompt(
@@ -103,11 +105,13 @@ const MOCK_RULES: MockRule[] = [
   },
 ];
 
-function mockAnalyze(message: string): CorrectorResult {
+function mockAnalyze(message: string, inputMode: InputMode): CorrectorResult {
   const errors: CorrectionError[] = [];
   let correctedMessage = message;
 
   for (const rule of MOCK_RULES) {
+    // En una transcripción la ortografía la pone el STT, no el estudiante.
+    if (inputMode === 'voice' && rule.category === 'spelling') continue;
     const match = message.match(rule.pattern);
     if (match) {
       const correctedFragment = rule.corrected(match, match[0]);

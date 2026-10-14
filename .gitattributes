@@ -1,0 +1,7 @@
+# Normaliza finales de línea en el repo; Git convierte según la plataforma al hacer checkout.
+* text=auto
+
+# Scripts que corren en contenedores Linux (Alpine): siempre LF, aun con core.autocrlf=true en Windows.
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.conf text eol=lf

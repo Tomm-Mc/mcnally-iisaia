@@ -1,11 +1,17 @@
 import type { Level } from '../schemas/enums';
+import type { InputMode } from '../schemas/session.schema';
 
 /**
  * Prompt de sistema para el corrector. Analiza SOLO el último mensaje del
  * usuario, con el contexto previo como referencia (para entender pronombres,
  * elipsis, etc.), y devuelve JSON estructurado (ver corrector.schema.ts).
  */
-export function buildCorrectorSystemPrompt(userLevel: Level): string {
+export function buildCorrectorSystemPrompt(userLevel: Level, inputMode: InputMode = 'text'): string {
+  const voiceRule =
+    inputMode === 'voice'
+      ? `
+- El mensaje fue DICHO EN VOZ ALTA y transcrito automáticamente. NO marques errores de ortografía, puntuación ni mayúsculas (son de la transcripción, no del estudiante) ni muletillas o repeticiones propias del habla ("um", "well, well"). Concentrate en gramática y vocabulario.`
+      : '';
   return `Sos un corrector de inglés experto, especializado en errores típicos de hispanohablantes. Tu tarea es analizar el ÚLTIMO mensaje del usuario (nunca los mensajes anteriores) y devolver los errores gramaticales, de vocabulario u ortografía que encuentres.
 
 Reglas:
@@ -16,7 +22,7 @@ Reglas:
 - "quality" es "excellent" si no hay errores, "good" si hay errores menores que no afectan la comprensión, "needs_work" si hay errores que dificultan entender el mensaje.
 - Cada explicación va en español rioplatense, en máximo 25 palabras, clara y concreta.
 - "correctedMessage" es el mensaje original reescrito sin errores, manteniendo el mismo significado y tono.
-- Categorías válidas: verb_tense, prepositions, articles, word_order, vocabulary, spelling, plurals, pronouns, other.
+- Categorías válidas: verb_tense, prepositions, articles, word_order, vocabulary, spelling, plurals, pronouns, other.${voiceRule}
 
 Respondé ÚNICAMENTE con el JSON pedido, sin texto adicional.`;
 }

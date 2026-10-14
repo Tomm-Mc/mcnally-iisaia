@@ -1,27 +1,32 @@
 import { useState, type FormEvent } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { MessageCircleHeart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { ApiError } from '../api/client';
+import { HOME_BY_ROLE } from '../components/layout/ProtectedRoute';
 
 const DEMO_USERS = [
   { label: 'Entrar como Ana (demo)', email: 'ana@charla.dev', password: 'charla123' },
   { label: 'Entrar como Tomás (demo)', email: 'tomas@charla.dev', password: 'charla123' },
+  { label: 'Entrar como administrador', email: 'admin@charla.dev', password: 'charlaadmin' },
 ];
 
 export function LoginPage() {
   const { user, login, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [email, setEmail] = useState('');
+  const locationState = location.state as { from?: string; registeredEmail?: string } | null;
+  // Viene de /register: se precarga el email y se muestra el aviso de cuenta creada.
+  const registeredEmail = locationState?.registeredEmail;
+  const [email, setEmail] = useState(registeredEmail ?? '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   if (!isLoading && user) {
-    const from = (location.state as { from?: string } | null)?.from ?? '/';
+    const from = locationState?.from ?? HOME_BY_ROLE[user.role];
     return <Navigate to={from} replace />;
   }
 
@@ -29,8 +34,8 @@ export function LoginPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await login(loginEmail, loginPassword);
-      navigate('/', { replace: true });
+      const loggedUser = await login(loginEmail, loginPassword);
+      navigate(HOME_BY_ROLE[loggedUser.role], { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'No se pudo iniciar sesión.');
     } finally {
@@ -51,6 +56,12 @@ export function LoginPage() {
           <h1 className="text-2xl font-extrabold text-brand-text">Charla</h1>
           <p className="text-sm text-slate-500">Practicá inglés charlando con personajes de IA.</p>
         </div>
+
+        {registeredEmail && !error && (
+          <p role="status" className="mb-3 rounded-2xl bg-teal-50 px-3 py-2 text-sm font-semibold text-teal-700">
+            ¡Listo, tu cuenta está creada! Iniciá sesión con tu contraseña.
+          </p>
+        )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <label className="flex flex-col gap-1 text-sm font-semibold text-slate-600">
@@ -86,6 +97,13 @@ export function LoginPage() {
             {submitting ? 'Entrando...' : 'Entrar'}
           </Button>
         </form>
+
+        <p className="mt-4 text-center text-sm text-slate-500">
+          ¿No tenés cuenta?{' '}
+          <Link to="/register" className="font-semibold text-brand-primary hover:underline">
+            Registrate
+          </Link>
+        </p>
 
         <div className="mt-5 flex flex-col gap-2 border-t border-slate-100 pt-4">
           <p className="text-center text-xs font-semibold uppercase tracking-wide text-slate-400">

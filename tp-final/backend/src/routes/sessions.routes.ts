@@ -99,7 +99,7 @@ sessionsRouter.post(
   asyncHandler(async (req, res) => {
     const userId = req.user!.id;
     const userLevel = req.user!.level;
-    const { content } = sendMessageSchema.parse(req.body);
+    const { content, inputMode } = sendMessageSchema.parse(req.body);
 
     const session = await prisma.session.findUnique({
       where: { id: req.params.id },
@@ -120,7 +120,7 @@ sessionsRouter.post(
 
     try {
       const userMessage = await prisma.message.create({
-        data: { sessionId: session.id, role: 'user', content },
+        data: { sessionId: session.id, role: 'user', content, inputMode },
       });
 
       const previousMessages = session.messages.slice(-6).map((m) => ({
@@ -128,7 +128,12 @@ sessionsRouter.post(
         content: m.content,
       }));
 
-      const correction = await analyzeMessage({ lastUserMessage: content, previousMessages, userLevel });
+      const correction = await analyzeMessage({
+        lastUserMessage: content,
+        previousMessages,
+        userLevel,
+        inputMode,
+      });
       writeSseEvent(res, 'correction', correction);
 
       if (correction.errors.length > 0) {
@@ -158,6 +163,7 @@ sessionsRouter.post(
         scenario: session.scenario,
         userLevel,
         history,
+        spoken: inputMode === 'voice',
       })) {
         fullReply += chunk;
         writeSseEvent(res, 'token', { token: chunk });

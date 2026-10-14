@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loginSchema } from '../schemas/auth.schema';
+import { loginSchema, registerSchema } from '../schemas/auth.schema';
 import { createSessionSchema, sendMessageSchema } from '../schemas/session.schema';
 import { answerExerciseSchema } from '../schemas/exercise.schema';
 import { correctorResultSchema } from '../schemas/corrector.schema';
@@ -18,6 +18,37 @@ describe('auth.schema', () => {
   it('rechaza una contraseña vacía', () => {
     const result = loginSchema.safeParse({ email: 'ana@charla.dev', password: '' });
     expect(result.success).toBe(false);
+  });
+});
+
+describe('registerSchema', () => {
+  const valid = { name: 'Lucía', email: 'lucia@mail.com', password: 'secreta123', level: 'B1' };
+
+  it('acepta un registro válido y normaliza el email', () => {
+    const result = registerSchema.safeParse({ ...valid, email: '  Lucia@Mail.COM ' });
+    expect(result.success).toBe(true);
+    expect(result.success && result.data.email).toBe('lucia@mail.com');
+  });
+
+  it('usa A2 como nivel por defecto', () => {
+    const { level: _level, ...withoutLevel } = valid;
+    const result = registerSchema.safeParse(withoutLevel);
+    expect(result.success && result.data.level).toBe('A2');
+  });
+
+  it('rechaza contraseñas de menos de 8 caracteres', () => {
+    expect(registerSchema.safeParse({ ...valid, password: 'corta' }).success).toBe(false);
+  });
+
+  it('rechaza un email inválido, un nombre vacío o un nivel inexistente', () => {
+    expect(registerSchema.safeParse({ ...valid, email: 'no-es-email' }).success).toBe(false);
+    expect(registerSchema.safeParse({ ...valid, name: ' ' }).success).toBe(false);
+    expect(registerSchema.safeParse({ ...valid, level: 'C1' }).success).toBe(false);
+  });
+
+  it('no permite elegir el rol (siempre se crea un estudiante)', () => {
+    const result = registerSchema.safeParse({ ...valid, role: 'admin' });
+    expect(result.success && 'role' in result.data).toBe(false);
   });
 });
 
