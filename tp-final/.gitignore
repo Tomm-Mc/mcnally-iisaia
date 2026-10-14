@@ -9,3 +9,5 @@ backend/prisma/dev.db*
 .DS_Store
 *.log
 .vscode/
+.claude/settings.local.json
+CLAUDE.local.md
