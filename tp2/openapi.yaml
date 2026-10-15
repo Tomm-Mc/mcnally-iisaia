@@ -1,0 +1,295 @@
+openapi: 3.1.0
+info:
+  title: API de stock
+  version: 1.0.0
+  description: |
+    Gestión de stock donde el stock de un producto **no se edita**: se deriva
+    de movimientos. Un movimiento es inmutable; un error se corrige con otro
+    movimiento de tipo `adjustment`.
+
+servers:
+  - url: http://localhost:3000
+
+paths:
+  /products:
+    get:
+      summary: Listar productos
+      operationId: listProducts
+      responses:
+        '200':
+          description: Lista de productos con su stock actual.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+    post:
+      summary: Crear un producto
+      description: El producto nace con stock 0. Para cargar stock inicial se registra un movimiento `in`.
+      operationId: createProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '201':
+          description: Producto creado.
+          headers:
+            Location:
+              description: URL del producto creado.
+              schema:
+                type: string
+                example: /products/12
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Ya existe un producto con ese `sku`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /products/{productId}:
+    parameters:
+      - $ref: '#/components/parameters/ProductId'
+    get:
+      summary: Obtener un producto
+      operationId: getProduct
+      responses:
+        '200':
+          description: El producto, con su stock actual.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          $ref: '#/components/responses/ProductNotFound'
+
+  /products/{productId}/movements:
+    parameters:
+      - $ref: '#/components/parameters/ProductId'
+    get:
+      summary: Listar los movimientos de un producto
+      description: Ordenados por `created_at` ascendente. Si el producto no existe se devuelve 404, no una lista vacía.
+      operationId: listMovements
+      responses:
+        '200':
+          description: Historial de movimientos del producto.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Movement'
+        '404':
+          $ref: '#/components/responses/ProductNotFound'
+    post:
+      summary: Registrar un movimiento
+      description: |
+        Única forma de modificar el stock de un producto. El movimiento queda
+        registrado tal cual; no existe forma de editarlo ni borrarlo.
+      operationId: createMovement
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: |
+            Clave elegida por el cliente para que un reintento no registre el
+            movimiento dos veces. Si la clave ya se usó con el mismo body, se
+            devuelve el movimiento original sin registrar otro. Si se usó con un
+            body distinto, se responde 409.
+          schema:
+            type: string
+            maxLength: 255
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MovementInput'
+      responses:
+        '201':
+          description: Movimiento registrado (o, si se repitió la `Idempotency-Key`, el movimiento original).
+          headers:
+            Location:
+              description: URL del movimiento.
+              schema:
+                type: string
+                example: /products/12/movements/87
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Movement'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/ProductNotFound'
+        '409':
+          description: La `Idempotency-Key` ya se usó con un body distinto.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: El movimiento dejaría el stock en negativo (una salida o un ajuste negativo mayor al stock disponible).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  parameters:
+    ProductId:
+      name: productId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+
+  responses:
+    BadRequest:
+      description: El body no es válido (falta un campo requerido o un valor está fuera de rango).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ProductNotFound:
+      description: El producto no existe.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    ProductInput:
+      type: object
+      required: [sku, name, unit]
+      additionalProperties: false
+      properties:
+        sku:
+          type: string
+          description: Código único del producto.
+          example: YER-500
+        name:
+          type: string
+          example: Yerba mate 500 g
+        unit:
+          type: string
+          description: Unidad en la que se cuenta el stock.
+          example: unidad
+        min_stock:
+          type: integer
+          minimum: 0
+          description: Umbral de reposición. Opcional.
+          example: 10
+
+    Product:
+      type: object
+      required: [id, sku, name, unit, stock]
+      properties:
+        id:
+          type: integer
+          readOnly: true
+          example: 12
+        sku:
+          type: string
+          example: YER-500
+        name:
+          type: string
+          example: Yerba mate 500 g
+        unit:
+          type: string
+          example: unidad
+        min_stock:
+          type: integer
+          minimum: 0
+          example: 10
+        stock:
+          type: integer
+          minimum: 0
+          readOnly: true
+          description: Calculado por el servidor como la suma de los movimientos. No se puede escribir.
+          example: 34
+
+    MovementInput:
+      type: object
+      required: [type, quantity]
+      additionalProperties: false
+      properties:
+        type:
+          type: string
+          enum: [in, out, adjustment]
+          description: |
+            - `in`: entrada de mercadería. `quantity` > 0.
+            - `out`: salida de mercadería. `quantity` > 0.
+            - `adjustment`: corrección (conteo físico, rotura, error de carga). `quantity` distinto de 0; negativo resta.
+        quantity:
+          type: integer
+          example: 5
+        reason:
+          type: string
+          description: Motivo del movimiento. Recomendado para los ajustes.
+          example: Conteo físico de fin de mes
+      if:
+        properties:
+          type:
+            enum: [in, out]
+      then:
+        properties:
+          quantity:
+            minimum: 1
+      else:
+        properties:
+          quantity:
+            not:
+              const: 0
+
+    Movement:
+      type: object
+      required: [id, product_id, type, quantity, created_at, stock_after]
+      properties:
+        id:
+          type: integer
+          readOnly: true
+          example: 87
+        product_id:
+          type: integer
+          readOnly: true
+          example: 12
+        type:
+          type: string
+          enum: [in, out, adjustment]
+        quantity:
+          type: integer
+          example: 5
+        reason:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        stock_after:
+          type: integer
+          minimum: 0
+          readOnly: true
+          description: Stock del producto inmediatamente después de este movimiento.
+          example: 29
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: insufficient_stock
+        message:
+          type: string
+          example: El stock actual (3) no alcanza para una salida de 5.
